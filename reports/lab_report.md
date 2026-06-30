@@ -1,67 +1,10 @@
-"""Report generation helper.
-
-Render the markdown lab report from metrics emitted by scenario runs.
-"""
-
-from __future__ import annotations
-
-from datetime import date
-from pathlib import Path
-
-from .metrics import MetricsReport
-
-
-def _bool(value: bool) -> str:
-    return "yes" if value else "no"
-
-
-def render_report(metrics: MetricsReport) -> str:
-    """Render a complete lab report from metrics data.
-
-    Return: formatted markdown string
-    """
-    has_resume_evidence = Path("outputs/persistence_evidence.txt").exists()
-    resume_success = metrics.resume_success or has_resume_evidence
-    scenario_rows = "\n".join(
-        "| {scenario_id} | {expected_route} | {actual_route} | {success} | {retry_count} | "
-        "{interrupt_count} | {approval_required} | {approval_observed} |".format(
-            scenario_id=item.scenario_id,
-            expected_route=item.expected_route,
-            actual_route=item.actual_route or "",
-            success=_bool(item.success),
-            retry_count=item.retry_count,
-            interrupt_count=item.interrupt_count,
-            approval_required=_bool(item.approval_required),
-            approval_observed=_bool(item.approval_observed),
-        )
-        for item in metrics.scenario_metrics
-    )
-    if not scenario_rows:
-        scenario_rows = "| n/a | n/a | n/a | no | 0 | 0 | no | no |"
-
-    scenario_header = (
-        "| Scenario | Expected route | Actual route | Success | Retries | Interrupts | "
-        "Approval required | Approval observed |"
-    )
-
-    failed = [item for item in metrics.scenario_metrics if not item.success]
-    failed_summary = (
-        "\n".join(
-            f"- {item.scenario_id}: expected `{item.expected_route}`, got "
-            f"`{item.actual_route}`; errors={item.errors or []}"
-            for item in failed
-        )
-        if failed
-        else "- No scenario failures in the current metrics run."
-    )
-
-    return f"""# Day 08 Lab Report
+# Day 08 Lab Report
 
 ## 1. Team / student
 
 - Name: Pham Quang Dung
 - Repo/commit: local workspace
-- Date: {date.today().isoformat()}
+- Date: 2026-06-30
 
 ## 2. Architecture
 
@@ -110,18 +53,24 @@ grounded final response from the query, tool results, approval decision, and err
 
 | Metric | Value |
 |---|---:|
-| Total scenarios | {metrics.total_scenarios} |
-| Success rate | {metrics.success_rate:.2%} |
-| Average nodes visited | {metrics.avg_nodes_visited:.2f} |
-| Total retries | {metrics.total_retries} |
-| Total approval/HITL events | {metrics.total_interrupts} |
-| Resume success demonstrated | {_bool(resume_success)} |
+| Total scenarios | 7 |
+| Success rate | 100.00% |
+| Average nodes visited | 6.43 |
+| Total retries | 3 |
+| Total approval/HITL events | 2 |
+| Resume success demonstrated | yes |
 
 ## 5. Scenario results
 
-{scenario_header}
+| Scenario | Expected route | Actual route | Success | Retries | Interrupts | Approval required | Approval observed |
 |---|---|---|---|---:|---:|---|---|
-{scenario_rows}
+| S01_simple | simple | simple | yes | 0 | 0 | no | no |
+| S02_tool | tool | tool | yes | 0 | 0 | no | no |
+| S03_missing | missing_info | missing_info | yes | 0 | 0 | no | no |
+| S04_risky | risky | risky | yes | 0 | 1 | yes | yes |
+| S05_error | error | error | yes | 2 | 0 | no | no |
+| S06_delete | risky | risky | yes | 0 | 1 | yes | yes |
+| S07_dead_letter | error | error | yes | 1 | 0 | no | no |
 
 ## 6. Failure analysis
 
@@ -141,7 +90,7 @@ grounded final response from the query, tool results, approval decision, and err
 
 Current failed scenarios:
 
-{failed_summary}
+- No scenario failures in the current metrics run.
 
 ## 7. Persistence / recovery evidence
 
@@ -169,11 +118,3 @@ snapshot count.
 With one more day, I would replace the mock support tool with typed external tool calls, add
 LLM-as-judge evaluation for tool result quality, build a small operator UI for real
 interrupt/resume approval, and automate crash-recovery replay as part of CI.
-"""
-
-
-def write_report(metrics: MetricsReport, output_path: str | Path) -> None:
-    """Write the rendered report to a file."""
-    path = Path(output_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_report(metrics), encoding="utf-8")

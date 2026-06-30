@@ -1,0 +1,6 @@
+SQLite persistence evidence
+thread_id=thread-sqlite-history
+route=tool
+final_answer_present=True
+history_snapshots=8
+finalize_observed=True

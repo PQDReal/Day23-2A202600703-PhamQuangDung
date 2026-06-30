@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 
 
-def get_llm(model: str | None = None, temperature: float = 0.0):
+def get_llm(model: str | None = None, temperature: float = 0.0) -> object:
     """Create an LLM client from environment configuration.
 
     Checks for API keys in this order:
